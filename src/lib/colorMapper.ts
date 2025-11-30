@@ -56,8 +56,7 @@ export function colorizeLatex(latex: string, tokens: Token[]): string {
 export function buildColorizedLatex(tokens: Token[]): string {
   return tokens.map(token => {
     if (token.children && token.children.length > 0) {
-      const childrenLatex = buildColorizedLatex(token.children);
-      return wrapWithColor(reconstructLatex(token, childrenLatex), token.color);
+      return wrapWithColor(reconstructLatex(token), token.color);
     }
     return wrapWithColor(token.rawLatex, token.color);
   }).join(' ');
@@ -68,7 +67,7 @@ function wrapWithColor(latex: string, color: string): string {
   return `{\\color{${color}}${latex}}`;
 }
 
-function reconstructLatex(token: Token, childrenLatex: string): string {
+function reconstructLatex(token: Token): string {
   switch (token.type) {
     case 'fraction':
       return token.rawLatex;

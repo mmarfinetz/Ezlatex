@@ -4,7 +4,7 @@ import { useEquationStore } from '../store/useEquationStore';
 
 export function ColorizedEquation() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { parsedEquation, latex, hoveredTokenId, setHoveredToken } = useEquationStore();
+  const { parsedEquation, latex } = useEquationStore();
 
   useEffect(() => {
     if (!containerRef.current) return;

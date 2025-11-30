@@ -1,6 +1,6 @@
 import type { Token, TokenType, ParsedEquation, ColorMap } from '../types/latex';
 import { TOKEN_COLORS } from '../types/latex';
-import { generateTokenId, resetTokenIdCounter, buildColorizedLatex } from './colorMapper';
+import { generateTokenId, resetTokenIdCounter } from './colorMapper';
 
 const GREEK_LETTERS = [
   'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta',
@@ -137,7 +137,6 @@ class LatexParser {
   }
 
   private parseCommand(): Token | null {
-    const start = this.pos;
     this.pos++;
 
     let cmdName = '';
@@ -156,31 +155,31 @@ class LatexParser {
     }
 
     if (cmdName === 'frac') {
-      return this.parseFraction(start);
+      return this.parseFraction();
     }
 
     if (cmdName === 'sqrt') {
-      return this.parseSqrt(start);
+      return this.parseSqrt();
     }
 
     if (cmdName === 'sum') {
-      return this.parseBigOperator('summation', start);
+      return this.parseBigOperator('summation');
     }
 
     if (cmdName === 'prod') {
-      return this.parseBigOperator('product', start);
+      return this.parseBigOperator('product');
     }
 
     if (cmdName === 'int') {
-      return this.parseBigOperator('integral', start);
+      return this.parseBigOperator('integral');
     }
 
     if (cmdName === 'lim') {
-      return this.parseLimit(start);
+      return this.parseLimit();
     }
 
     if (cmdName === 'binom') {
-      return this.parseBinom(start);
+      return this.parseBinom();
     }
 
     if (GREEK_LETTERS.includes(cmdName)) {
@@ -241,7 +240,7 @@ class LatexParser {
     return this.createToken('operator', cmdName, '\\' + cmdName);
   }
 
-  private parseFraction(start: number): Token {
+  private parseFraction(): Token {
     this.skipWhitespace();
 
     const numerator = this.parseSingleTokenOrGroup();
@@ -259,7 +258,7 @@ class LatexParser {
     return token;
   }
 
-  private parseSqrt(start: number): Token {
+  private parseSqrt(): Token {
     this.skipWhitespace();
 
     let nthRoot = '';
@@ -281,7 +280,7 @@ class LatexParser {
     return token;
   }
 
-  private parseBigOperator(type: 'summation' | 'product' | 'integral', start: number): Token {
+  private parseBigOperator(type: 'summation' | 'product' | 'integral'): Token {
     let rawLatex = type === 'summation' ? '\\sum' : type === 'product' ? '\\prod' : '\\int';
     const bounds: { lower?: string; upper?: string } = {};
 
@@ -318,7 +317,7 @@ class LatexParser {
     return token;
   }
 
-  private parseLimit(start: number): Token {
+  private parseLimit(): Token {
     let rawLatex = '\\lim';
     let bounds: { lower?: string } = {};
 
@@ -336,7 +335,7 @@ class LatexParser {
     return token;
   }
 
-  private parseBinom(start: number): Token {
+  private parseBinom(): Token {
     this.skipWhitespace();
 
     const n = this.parseSingleTokenOrGroup();
