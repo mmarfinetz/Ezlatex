@@ -1,73 +1,64 @@
-# React + TypeScript + Vite
+# EzLaTeX
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Colorize LaTeX equations and get AI-powered plain English explanations.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Custom LaTeX parser with color-coded token types
+- KaTeX rendering with dark mode support
+- AI explanations via Claude or GPT-5
+- Brief and detailed explanation modes
+- Example equations gallery
 
-## React Compiler
+## Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+# Install dependencies
+npm install
 
-## Expanding the ESLint configuration
+# Run frontend + backend together
+npm run dev:all
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Or run separately:
+npm run dev          # Frontend (port 5173)
+npm run dev:server   # Backend (port 3001)
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Environment Variables
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Copy `.env.example` to `.env` and fill in your API keys:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+ANTHROPIC_API_KEY=your-key
+OPENAI_API_KEY=your-key     # Optional, for GPT-5
+DEFAULT_MODEL=claude
+PORT=3001
+```
+
+## Deployment
+
+### Backend (Railway)
+
+1. Create a new project on [Railway](https://railway.app)
+2. Connect your GitHub repo
+3. Set environment variables:
+   - `ANTHROPIC_API_KEY`
+   - `OPENAI_API_KEY` (optional)
+   - `DEFAULT_MODEL=claude`
+4. Railway will auto-detect the `Procfile` and deploy
+
+### Frontend (Vercel/Netlify)
+
+1. Create a new project and connect your repo
+2. Set build command: `npm run build`
+3. Set output directory: `dist`
+4. Add environment variable:
+   - `VITE_API_URL=https://your-railway-app.railway.app/api`
+
+## Tech Stack
+
+- React + TypeScript + Vite
+- Tailwind CSS
+- KaTeX for LaTeX rendering
+- Zustand for state management
+- Express backend with Claude/GPT-5 APIs
