@@ -1,8 +1,11 @@
+import { useEffect, useRef } from 'react';
 import { useEquationStore } from '../store/useEquationStore';
+import { renderMathInElement } from '../lib/katexAutoRender';
 
 export function PlainEnglish() {
   const { explanation, isLoading, error, fetchExplanation, parsedEquation } =
     useEquationStore();
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const copyAsHtml = () => {
     if (explanation?.html) {
@@ -15,6 +18,27 @@ export function PlainEnglish() {
       navigator.clipboard.writeText(explanation.plainText);
     }
   };
+
+  useEffect(() => {
+    if (!explanation?.html || !containerRef.current) return;
+
+    // Use requestAnimationFrame to ensure DOM has updated after dangerouslySetInnerHTML
+    requestAnimationFrame(() => {
+      if (!containerRef.current) return;
+      try {
+        renderMathInElement(containerRef.current, {
+          delimiters: [
+            { left: '\\(', right: '\\)', display: false },
+            { left: '\\[', right: '\\]', display: true },
+          ],
+          throwOnError: false,
+        });
+      } catch (e) {
+        // If math rendering fails for any reason, leave the raw text.
+        console.error('Error rendering math in explanation', e);
+      }
+    });
+  }, [explanation?.html]);
 
   if (isLoading) {
     return (
@@ -76,6 +100,7 @@ export function PlainEnglish() {
     <div className="relative group">
       <div className="p-6 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
         <div
+          ref={containerRef}
           className="text-lg leading-relaxed text-gray-700 dark:text-gray-200"
           dangerouslySetInnerHTML={{ __html: explanation.html }}
         />
