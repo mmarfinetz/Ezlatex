@@ -42,34 +42,57 @@ interface ExplainRequest {
 
 type DetailLevel = 'brief' | 'detailed';
 
+function flattenComponents(tokens: Token[]): Token[] {
+  const result: Token[] = [];
+  const seen = new Set<string>();
+
+  function walk(list: Token[]) {
+    for (const token of list) {
+      if (token.type !== 'operator' && token.type !== 'group') {
+        const key = `${token.rawLatex}|${token.type}|${token.color}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          result.push(token);
+        }
+      }
+      if ((token as any).children && Array.isArray((token as any).children)) {
+        walk((token as any).children as Token[]);
+      }
+    }
+  }
+
+  walk(tokens);
+  return result;
+}
+
 function buildPrompt(
   latex: string,
   tokens: Token[],
   detailLevel: DetailLevel = 'brief'
 ): string {
-  const uniqueColors = new Map<string, Token>();
-  tokens
-    .filter(t => t.type !== 'operator' && t.type !== 'group')
-    .forEach(t => {
-      if (!uniqueColors.has(t.color)) {
-        uniqueColors.set(t.color, t);
-      }
-    });
+  const components = flattenComponents(tokens);
 
-  const tokenDescriptions = Array.from(uniqueColors.values())
-    .map(t => `- "${t.value}" (${t.type}): ${t.color}`)
+  const tokenDescriptions = components
+    .map(
+      (t, index) =>
+        `${index + 1}. "${t.rawLatex}" (${t.type}) — color ${t.color}`
+    )
     .join('\n');
 
-  const colorList = Array.from(uniqueColors.keys()).join(', ');
+  const colorList = Array.from(
+    new Set(components.map(t => t.color))
+  ).join(', ');
 
   const sharedIntro = `You are explaining math to someone who thinks visually. Here's a LaTeX equation with its components identified:
 
 Equation: ${latex}
 
-Components (each has a unique color):
+Components (some may share the same color):
 ${tokenDescriptions}
 
-The "type" hint describes the role of each component (result_var = final quantity, input_var = inputs, index_var = position/time/frequency index, summation = add many contributions, exponent = power/rotation, bounds = limits on a sum or integral, etc.). Use these roles to ground your explanation in how the equation behaves.`;
+The "type" hint describes the role of each component (result_var = final quantity, input_var = inputs or sample values, index_var = position/time/frequency index, summation = add many contributions, exponent = power/rotation or repeated multiplication, bounds = limits on a sum or integral, function = named operation like sin/log/exp, constant = fixed number or symbol, etc.). Use these roles to ground your explanation in how the equation behaves.
+
+When you see exponentials like e^{...} or complex exponentials (for example e^{i·something} or e^{-i·something}), explain them as applying a transformation/weighting or oscillation to the inputs, not just "raising e to a power".`;
 
   if (detailLevel === 'detailed') {
     return `${sharedIntro}
@@ -80,10 +103,11 @@ PART 1 – Big-picture summary
 - 1–2 sentences (30–70 words) explaining the overall process: what goes in, how it is transformed, and what the final result means.
 - Weave in the most important components using colored spans.
 
-PART 2 – Color-by-color breakdown
+PART 2 – Component-by-component breakdown
 - After a blank line (use "<br/><br/>"), add the heading: "Color-by-color breakdown:".
-- Then, for EVERY component listed above, write a separate bullet on its own line.
+- Then, for EVERY component listed above, write a separate bullet on its own line, even if multiple components share the same color.
 - Each bullet must start with "• " followed by a <span style="color:{hex};font-weight:600">short phrase for that component</span>, then plain English describing its role in the equation.
+- Make sure that components which share a color (for example a raw input x_n and a weighting factor e^{-i2πkn/N}) are still described separately so the reader understands what each one does.
 
 STRICT COLOR RULES:
 1. You MUST use ALL of these colors in your explanation: ${colorList}
@@ -104,7 +128,7 @@ Write a single flowing explanation of what this equation DOES (not what it IS).
 
 CRITICAL REQUIREMENTS:
 1. You MUST use ALL of these colors in your explanation: ${colorList}
-2. Every colored component from the equation must be explicitly referenced with its matching color at least once
+2. Every component in the Components list must be explicitly referenced at least once, using its matching color
 3. Use <span style="color:{hex};font-weight:600">phrase</span> tags with the EXACT hex colors listed above
 4. Use analogies and intuitive language, avoid jargon
 5. Keep it between 40 and 80 words
