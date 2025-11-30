@@ -37,6 +37,7 @@ interface ExplainRequest {
   tokens: Token[];
   model?: ModelProvider;
   reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
+  detailLevel?: 'brief' | 'detailed';
 }
 
 type DetailLevel = 'brief' | 'detailed';
@@ -148,7 +149,10 @@ async function generateWithGPT5(
   return { text, reasoning };
 }
 
-app.post('/api/explain', async (req, res) => {
+async function handleExplain(
+  req: express.Request,
+  res: express.Response
+) {
   try {
     const { latex, tokens, model, reasoningEffort, detailLevel } = req.body as ExplainRequest;
 
@@ -191,9 +195,15 @@ app.post('/api/explain', async (req, res) => {
       error: error instanceof Error ? error.message : 'Failed to generate explanation',
     });
   }
-});
+}
 
-app.post('/api/explain/stream', async (req, res) => {
+app.post('/api/explain', handleExplain);
+app.post('/explain', handleExplain);
+
+async function handleExplainStream(
+  req: express.Request,
+  res: express.Response
+) {
   try {
     const { latex, tokens, detailLevel } = req.body as ExplainRequest;
 
@@ -234,7 +244,10 @@ app.post('/api/explain/stream', async (req, res) => {
       error: error instanceof Error ? error.message : 'Failed to stream explanation',
     });
   }
-});
+}
+
+app.post('/api/explain/stream', handleExplainStream);
+app.post('/explain/stream', handleExplainStream);
 
 app.get('/api/health', (req, res) => {
   res.json({
