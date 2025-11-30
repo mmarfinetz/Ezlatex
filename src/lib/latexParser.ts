@@ -52,6 +52,9 @@ class LatexParser {
   }
 
   private colorizeRecursive(tokens: Token[]): string {
+    // Structural tokens that shouldn't have their own color - only their children
+    const structuralTypes: TokenType[] = ['fraction', 'sqrt', 'group'];
+
     return tokens.map(token => {
       let inner = token.rawLatex;
 
@@ -59,7 +62,8 @@ class LatexParser {
         inner = this.colorizeRecursive(token.children);
       }
 
-      if (token.color && token.color !== TOKEN_COLORS.operator) {
+      // Skip colorizing structural tokens - they inherit color from children
+      if (token.color && token.color !== TOKEN_COLORS.operator && !structuralTypes.includes(token.type)) {
         return `{\\color{${token.color}}${inner}}`;
       }
       return inner;
@@ -248,7 +252,8 @@ class LatexParser {
     const denominator = this.parseSingleTokenOrGroup();
 
     const rawLatex = `\\frac{${numerator}}{${denominator}}`;
-    const token = this.createToken('fraction', 'fraction', rawLatex, TOKEN_COLORS.fraction);
+    // Don't assign color to structural tokens - let children determine color
+    const token = this.createToken('fraction', 'fraction', rawLatex);
 
     token.children = [
       ...this.parseSubExpression(numerator),
@@ -274,7 +279,8 @@ class LatexParser {
     const content = this.parseSingleTokenOrGroup();
     const rawLatex = nthRoot ? `\\sqrt[${nthRoot}]{${content}}` : `\\sqrt{${content}}`;
 
-    const token = this.createToken('sqrt', 'sqrt', rawLatex, TOKEN_COLORS.sqrt);
+    // Don't assign color to structural tokens - let children determine color
+    const token = this.createToken('sqrt', 'sqrt', rawLatex);
     token.children = this.parseSubExpression(content);
 
     return token;

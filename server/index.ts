@@ -45,10 +45,12 @@ type DetailLevel = 'brief' | 'detailed';
 function flattenComponents(tokens: Token[]): Token[] {
   const result: Token[] = [];
   const seen = new Set<string>();
+  // Structural tokens that shouldn't be sent to Claude - only their children have semantic meaning
+  const structuralTypes = ['operator', 'group', 'fraction', 'sqrt', 'subscript'];
 
   function walk(list: Token[]) {
     for (const token of list) {
-      if (token.type !== 'operator' && token.type !== 'group') {
+      if (!structuralTypes.includes(token.type)) {
         const key = `${token.rawLatex}|${token.type}|${token.color}`;
         if (!seen.has(key)) {
           seen.add(key);
@@ -71,6 +73,7 @@ function buildPrompt(
   detailLevel: DetailLevel = 'brief'
 ): string {
   const components = flattenComponents(tokens);
+  const componentCount = components.length;
 
   const tokenDescriptions = components
     .map(
@@ -92,6 +95,10 @@ ${tokenDescriptions}
 
 The "type" hint describes the role of each component (result_var = final quantity, input_var = inputs or sample values, index_var = position/time/frequency index, summation = add many contributions, exponent = power/rotation or repeated multiplication, bounds = limits on a sum or integral, function = named operation like sin/log/exp, constant = fixed number or symbol, etc.). Use these roles to ground your explanation in how the equation behaves.
 
+IMPORTANT MATH FORMATTING:
+- Whenever you include a symbolic expression from the Components list (like X_k or \\sum_{n=0}^{N-1}), write it in LaTeX between \\( and \\), for example: \\( X_k \\), \\( \\sum_{n=0}^{N-1} \\), \\( e^{-i2\\pi kn/N} \\).
+- Put these LaTeX expressions inside the colored <span> tags so they can be rendered as proper math in the UI.
+
 When you see exponentials like e^{...} or complex exponentials (for example e^{i·something} or e^{-i·something}), explain them as applying a transformation/weighting or oscillation to the inputs, not just "raising e to a power".`;
 
   if (detailLevel === 'detailed') {
@@ -105,8 +112,9 @@ PART 1 – Big-picture summary
 
 PART 2 – Component-by-component breakdown
 - After a blank line (use "<br/><br/>"), add the heading: "Color-by-color breakdown:".
-- Then, for EVERY component listed above, write a separate bullet on its own line, even if multiple components share the same color.
-- Each bullet must start with "• " followed by a <span style="color:{hex};font-weight:600">short phrase for that component</span>, then plain English describing its role in the equation.
+- There are exactly ${componentCount} components listed above. Write EXACTLY ${componentCount} bullets in PART 2, one bullet per component, in the SAME ORDER as the Components list.
+- Do not merge multiple components into a single bullet and do not invent extra bullets.
+- Each bullet must start with "• " followed by a <span style="color:{hex};font-weight:600">short phrase for that component that includes its LaTeX form written between \\( and \\)</span>, then plain English describing its role in the equation.
 - Make sure that components which share a color (for example a raw input x_n and a weighting factor e^{-i2πkn/N}) are still described separately so the reader understands what each one does.
 
 STRICT COLOR RULES:
@@ -114,6 +122,7 @@ STRICT COLOR RULES:
 2. Every component in the Components list must be mentioned at least once in PART 2.
 3. Whenever you refer to a component, wrap the key phrase for it in a <span style="color:{hex};font-weight:600">...</span> tag using its EXACT hex color.
 4. Do NOT invent any new colors or components that are not in the Components list.
+5. If ANY component from the Components list is missing its own bullet in PART 2, your answer is considered incorrect.
 
 STYLE:
 - Use analogies and intuitive language; avoid heavy jargon.
@@ -129,7 +138,7 @@ Write a single flowing explanation of what this equation DOES (not what it IS).
 CRITICAL REQUIREMENTS:
 1. You MUST use ALL of these colors in your explanation: ${colorList}
 2. Every component in the Components list must be explicitly referenced at least once, using its matching color
-3. Use <span style="color:{hex};font-weight:600">phrase</span> tags with the EXACT hex colors listed above
+3. Use <span style="color:{hex};font-weight:600">phrase that includes the component's LaTeX form written between \\( and \\)</span> tags with the EXACT hex colors listed above
 4. Use analogies and intuitive language, avoid jargon
 5. Keep it between 40 and 80 words
 
@@ -142,7 +151,7 @@ Now write the explanation. Return ONLY the HTML-formatted text, nothing else.`;
 async function generateWithClaude(prompt: string): Promise<string> {
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 300,
+    max_tokens: 800,
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -246,7 +255,7 @@ async function handleExplainStream(
 
     const stream = await anthropic.messages.stream({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 300,
+      max_tokens: 800,
       messages: [
         {
           role: 'user',
